@@ -4,9 +4,6 @@
 [submodule "modules/gtest"]
 	path = modules/gtest
 	url = git@bitbucket.org:autoisteam/gtest.git
-[submodule "modules/mavlink"]
-	path = modules/mavlink
-	url = git@bitbucket.org:autoisteam/mavlink.git
 [submodule "modules/gbenchmark"]
 	path = modules/gbenchmark
 	url = git@bitbucket.org:autoisteam/gbenchmark.git
@@ -19,3 +16,6 @@
 [submodule "modules/ChibiOS"]
 	path = modules/ChibiOS
 	url = git@bitbucket.org:autoisteam/ChibiOS.git
+[submodule "modules/mavlink"]
+	path = modules/mavlink
+	url = git@bitbucket.org:autoisteam/mavlink.git

@@ -1,0 +1,21 @@
+[submodule "modules/libcanard"]
+	path = modules/libcanard
+	url = git@bitbucket.org:autoisteam/libcanard.git
+[submodule "modules/gtest"]
+	path = modules/gtest
+	url = git@bitbucket.org:autoisteam/gtest.git
+[submodule "modules/mavlink"]
+	path = modules/mavlink
+	url = git@bitbucket.org:autoisteam/mavlink.git
+[submodule "modules/gbenchmark"]
+	path = modules/gbenchmark
+	url = git@bitbucket.org:autoisteam/gbenchmark.git
+[submodule "modules/waf"]
+	path = modules/waf
+	url = git@bitbucket.org:autoisteam/waf.git
+[submodule "modules/uavcan"]
+	path = modules/uavcan
+	url = git@bitbucket.org:autoisteam/uavcan.git
+[submodule "modules/ChibiOS"]
+	path = modules/ChibiOS
+	url = git@bitbucket.org:autoisteam/ChibiOS.git

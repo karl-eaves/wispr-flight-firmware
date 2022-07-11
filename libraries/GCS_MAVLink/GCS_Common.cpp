@@ -40,6 +40,7 @@
 #include <AP_Baro/AP_Baro.h>
 
 #include <stdio.h>
+#include <iostream>
 
 #if HAL_RCINPUT_WITH_AP_RADIO
 #include <AP_Radio/AP_Radio.h>
@@ -225,6 +226,8 @@ void GCS_MAVLINK::send_battery_status(const uint8_t instance) const
     } else {
         consumed_wh = -1;
     }
+
+    std::cout<< "SENDING BATT"<<std::endl;
     mavlink_msg_battery_status_send(chan,
                                     instance, // id
                                     MAV_BATTERY_FUNCTION_UNKNOWN, // function
@@ -248,6 +251,80 @@ bool GCS_MAVLINK::send_battery_status() const
         if (battery.get_type(i) != AP_BattMonitor_Params::BattMonitor_Type::BattMonitor_TYPE_NONE) {
             CHECK_PAYLOAD_SIZE(BATTERY_STATUS);
             send_battery_status(i);
+        }
+    }
+    return true;
+}
+
+void GCS_MAVLINK::send_wispr_battery_status(const uint8_t instance) const
+{
+    // catch the battery backend not supporting the required number of cells
+    static_assert(sizeof(AP_BattMonitor::cells) >= (sizeof(uint16_t) * MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_LEN),
+                  "Not enough battery cells for the MAVLink message");
+
+    const AP_BattMonitor &battery = AP::battery();
+    float temp;
+    bool got_temperature = battery.get_temperature(temp, instance);
+
+    // ensure we always send a voltage estimate to the GCS, because not all battery monitors monitor individual cells
+    // as a work around for this we create a set of fake cells to be used if the backend doesn't provide direct monitoring
+    // the GCS can then recover the pack voltage by summing all non ignored cell values. Because this is looped we can
+    // report a pack up to 655.34 V with this method
+    AP_BattMonitor::cells fake_cells;
+    if (!battery.has_cell_voltages(instance)) {
+        float voltage = battery.voltage(instance) * 1e3f;
+        for (uint8_t i = 0; i < MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_LEN; i++) {
+          if (voltage < 0.001f) {
+              // too small to send to the GCS, set it to the no cell value
+              fake_cells.cells[i] = UINT16_MAX;
+          } else {
+              fake_cells.cells[i] = MIN(voltage, 65534.0f); // Can't send more then UINT16_MAX - 1 in a cell
+              voltage -= 65534.0f;
+          }
+        }
+    }
+
+    float current, consumed_mah, consumed_wh;
+    if (battery.current_amps(current, instance)) {
+         current *= 100;
+    } else {
+        current = -1;
+    }
+    if (!battery.consumed_mah(consumed_mah, instance)) {
+        consumed_mah = -1;
+    }
+    if (battery.consumed_wh(consumed_wh, instance)) {
+        consumed_wh *= 36;
+    } else {
+        consumed_wh = -1;
+    }
+    std::cout<< "SENDING WISPR"<<std::endl;
+    std::cout<< "RESTING VOLT:  " << battery.voltage_resting_estimate(instance) << std::endl;
+
+    mavlink_msg_wispr_battery_status_send(chan,
+                                    instance, // id
+                                    MAV_BATTERY_FUNCTION_UNKNOWN, // function
+                                    MAV_BATTERY_TYPE_UNKNOWN, // type
+                                    got_temperature ? ((int16_t) (temp * 100)) : INT16_MAX, // temperature. INT16_MAX if unknown
+                                    battery.has_cell_voltages(instance) ? battery.get_cell_voltages(instance).cells : fake_cells.cells, // cell voltages
+                                    current,      // current in centiampere
+                                    consumed_mah, // total consumed current in milliampere.hour
+                                    consumed_wh,  // consumed energy in hJ (hecto-Joules)
+                                    battery.capacity_remaining_pct(instance),
+                                    battery.voltage_resting_estimate(instance),
+                                    0, // time remaining, seconds (not provided)
+                                    MAV_BATTERY_CHARGE_STATE_UNDEFINED);
+}
+
+// returns true if all battery instances were reported
+bool GCS_MAVLINK::send_wispr_battery_status() const
+{
+    const AP_BattMonitor &battery = AP::battery();
+
+    for(uint8_t i = 0; i < battery.num_instances(); i++) {
+        if (battery.get_type(i) != AP_BattMonitor_Params::BattMonitor_Type::BattMonitor_TYPE_NONE) {
+            CHECK_PAYLOAD_SIZE(WISPR_BATTERY_STATUS);
+            send_wispr_battery_status(i);
         }
     }
     return true;
@@ -779,6 +856,7 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
         { MAVLINK_MSG_ID_POSITION_TARGET_LOCAL_NED,  MSG_POSITION_TARGET_LOCAL_NED},
         { MAVLINK_MSG_ID_ADSB_VEHICLE,          MSG_ADSB_VEHICLE},
         { MAVLINK_MSG_ID_BATTERY_STATUS,        MSG_BATTERY_STATUS},
+        { MAVLINK_MSG_ID_WISPR_BATTERY_STATUS,  MSG_WISPR_BATTERY_STATUS},
         { MAVLINK_MSG_ID_AOA_SSA,               MSG_AOA_SSA},
         { MAVLINK_MSG_ID_DEEPSTALL,             MSG_LANDING},
         { MAVLINK_MSG_ID_EXTENDED_SYS_STATE,    MSG_EXTENDED_SYS_STATE},
@@ -4283,6 +4361,10 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
 
     case MSG_BATTERY_STATUS:
         send_battery_status();
+        break;
+
+    case MSG_WISPR_BATTERY_STATUS:
+        send_wispr_battery_status();
         break;
 
     case MSG_BATTERY2:

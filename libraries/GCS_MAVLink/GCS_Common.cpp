@@ -40,7 +40,6 @@
 #include <AP_Baro/AP_Baro.h>
 
 #include <stdio.h>
-#include <iostream>
 
 #if HAL_RCINPUT_WITH_AP_RADIO
 #include <AP_Radio/AP_Radio.h>
@@ -227,7 +226,6 @@ void GCS_MAVLINK::send_battery_status(const uint8_t instance) const
         consumed_wh = -1;
     }
 
-    std::cout<< "SENDING BATT"<<std::endl;
     mavlink_msg_battery_status_send(chan,
                                     instance, // id
                                     MAV_BATTERY_FUNCTION_UNKNOWN, // function
@@ -298,8 +296,6 @@ void GCS_MAVLINK::send_wispr_battery_status(const uint8_t instance) const
     } else {
         consumed_wh = -1;
     }
-    std::cout<< "SENDING WISPR"<<std::endl;
-    std::cout<< "RESTING VOLT:  " << battery.voltage_resting_estimate(instance) << std::endl;
 
     mavlink_msg_wispr_battery_status_send(chan,
                                     instance, // id
@@ -314,6 +310,7 @@ void GCS_MAVLINK::send_wispr_battery_status(const uint8_t instance) const
                                     battery.voltage_resting_estimate(instance),
                                     0, // time remaining, seconds (not provided)
                                     MAV_BATTERY_CHARGE_STATE_UNDEFINED);
+
 }
 
 // returns true if all battery instances were reported

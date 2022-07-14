@@ -307,7 +307,7 @@ void GCS_MAVLINK::send_wispr_battery_status(const uint8_t instance) const
                                     consumed_mah, // total consumed current in milliampere.hour
                                     consumed_wh,  // consumed energy in hJ (hecto-Joules)
                                     battery.capacity_remaining_pct(instance),
-                                    battery.voltage_resting_estimate(instance),
+                                    (uint16_t) (battery.voltage_resting_estimate(instance) * 1000),
                                     0, // time remaining, seconds (not provided)
                                     MAV_BATTERY_CHARGE_STATE_UNDEFINED);
 

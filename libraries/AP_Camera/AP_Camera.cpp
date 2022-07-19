@@ -12,6 +12,8 @@
 #include <AP_GPS/AP_GPS.h>
 #include "AP_Camera_SoloGimbal.h"
 
+#include <iostream>
+
 // ------------------------------
 #define CAM_DEBUG DISABLED
 
@@ -245,6 +247,8 @@ void AP_Camera::configure(float shooting_mode, float shutter_speed, float apertu
 {
     // we cannot process the configure command so convert to mavlink message
     // and send to all components in case they and process it
+
+    std::cout << "HERE"<<std::endl;
 
     mavlink_command_long_t mav_cmd_long = {};
 

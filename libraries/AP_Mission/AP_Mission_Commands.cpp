@@ -6,6 +6,8 @@
 #include <AP_Parachute/AP_Parachute.h>
 #include <AP_ServoRelayEvents/AP_ServoRelayEvents.h>
 
+#include <iostream>
+
 bool AP_Mission::start_command_do_gripper(const AP_Mission::Mission_Command& cmd)
 {
     AP_Gripper *gripper = AP::gripper();
@@ -72,14 +74,21 @@ bool AP_Mission::start_command_do_servorelayevents(const AP_Mission::Mission_Com
 
 bool AP_Mission::start_command_camera(const AP_Mission::Mission_Command& cmd)
 {
+    std::cout<<"Start command camera 2"<<std::endl;
     AP_Camera *camera = AP::camera();
-    if (camera == nullptr) {
-        return false;
-    }
+    // if (camera == nullptr) {
+    //     return false;
+    // }
+
+    std::cout<<cmd.id<<std::endl;
 
     switch (cmd.id) {
 
     case MAV_CMD_DO_DIGICAM_CONFIGURE:                  // Mission command to configure an on-board camera controller system. |Modes: P, TV, AV, M, Etc| Shutter speed: Divisor number for one second| Aperture: F stop number| ISO number e.g. 80, 100, 200, Etc| Exposure type enumerator| Command Identity| Main engine cut-off time before camera trigger in seconds/10 (0 means no cut-off)|
+        
+        std::cout << "CAMERA STUFF"<<std::endl;
+
+        
         camera->configure(
             cmd.content.digicam_configure.shooting_mode,
             cmd.content.digicam_configure.shutter_speed,

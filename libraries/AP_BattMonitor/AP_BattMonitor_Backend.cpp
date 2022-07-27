@@ -151,20 +151,20 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
 }
 
 
-static double _get_distance_to_home(void)
-{
+// static double _get_distance_to_home(void)
+// {
 
-    const AP_AHRS &ahrs = AP::ahrs();
+//     const AP_AHRS &ahrs = AP::ahrs();
 
-    Location home_loc =  ahrs.get_home();
+//     Location home_loc =  ahrs.get_home();
 
-    Location current_loc;
-    ahrs.get_position(current_loc);
+//     Location current_loc;
+//     ahrs.get_position(current_loc);
 
-    double distance = current_loc.get_distance(home_loc);
-    return distance;
-    // _distance_to_destination = current_loc.get_distance(_destination);
-}
+//     double distance = current_loc.get_distance(home_loc);
+//     return distance;
+//     // _distance_to_destination = current_loc.get_distance(_destination);
+// }
 
 static bool update_check(size_t buflen, char *buffer, bool failed, const char *message)
 {
@@ -253,9 +253,87 @@ void AP_BattMonitor_Backend::check_failsafe_types(bool &low_voltage, bool &low_c
 
 void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
 {
-    std::cout<<"Checking custom failsafe..."<<std::endl;
+    if (!param_values_set()){
+        set_param_values();
+        custom_failsafe = false;
+        return;
+    }
+    
+    // std::cout<<"Checking custom failsafe..."<<std::endl;
     custom_failsafe = false;
+
     return;
+}
+
+bool AP_BattMonitor_Backend::param_values_set()
+{
+    return _rtl_speed != NULL && _wpnav_speed != NULL && _land_alt_low != NULL && _land_speed != NULL && _land_speed_high != NULL && _wpnav_speed_dn != NULL;
+}
+
+void AP_BattMonitor_Backend::set_param_values() const
+{
+    enum ap_var_type p_type;
+    AP_Param *vp;
+
+    // WPNAV_SPEED
+    char pn[AP_MAX_NAME_SIZE+1] = "WPNAV_SPEED";
+    pn[AP_MAX_NAME_SIZE] = 0;
+    vp = AP_Param::find(pn, &p_type);
+    if (vp == NULL) {
+    }
+    else {
+        _wpnav_speed = vp->cast_to_float(p_type);
+    }
+
+    // RTL_SPEED
+    char pn[AP_MAX_NAME_SIZE+1] = "RTL_SPEED";
+    pn[AP_MAX_NAME_SIZE] = 0;
+    vp = AP_Param::find(pn, &p_type);
+    if (vp == NULL) {
+    }
+    else {
+        _rtl_speed = vp->cast_to_float(p_type);
+    }
+
+    // LAND_ALT_LOW
+    char pn[AP_MAX_NAME_SIZE+1] = "LAND_ALT_LOW";
+    pn[AP_MAX_NAME_SIZE] = 0;
+    vp = AP_Param::find(pn, &p_type);
+    if (vp == NULL) {
+    }
+    else {
+        _land_alt_low = vp->cast_to_float(p_type);
+    }
+
+    // LAND_SPEED_HIGH
+    char pn[AP_MAX_NAME_SIZE+1] = "LAND_SPEED_HIGH";
+    pn[AP_MAX_NAME_SIZE] = 0;
+    vp = AP_Param::find(pn, &p_type);
+    if (vp == NULL) {
+    }
+    else {
+        _land_speed_high = vp->cast_to_float(p_type);
+    }
+
+    // WPNAV_SPEED_DN
+    char pn[AP_MAX_NAME_SIZE+1] = "WPNAV_SPEED_DN";
+    pn[AP_MAX_NAME_SIZE] = 0;
+    vp = AP_Param::find(pn, &p_type);
+    if (vp == NULL) {
+    }
+    else {
+        _wpnav_speed_dn = vp->cast_to_float(p_type);
+    }
+
+    // LAND_SPEED
+    char pn[AP_MAX_NAME_SIZE+1] = "LAND_SPEED";
+    pn[AP_MAX_NAME_SIZE] = 0;
+    vp = AP_Param::find(pn, &p_type);
+    if (vp == NULL) {
+    }
+    else {
+        _land_speed = vp->cast_to_float(p_type);
+    }
 }
 
 /*

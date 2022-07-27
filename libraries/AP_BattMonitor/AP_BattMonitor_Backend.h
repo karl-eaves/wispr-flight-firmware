@@ -71,7 +71,9 @@ protected:
     AP_BattMonitor_Params               &_params;   // reference to this instances parameters (held in the front-end)
 
     // checks what failsafes could be triggered
-    void check_failsafe_types(bool &low_voltage, bool &low_capacity, bool &critical_voltage, bool &critical_capacity) const;
+    void check_failsafe_types(bool &low_voltage, bool &low_capacity, bool &critical_voltage, bool &critical_capacity, bool &custom_low_capacity) const;
+    void check_custom_failsafe(bool &custom_failsafe) const;
+    static double _get_distance_to_home(void);
 
 private:
     // resistance estimate

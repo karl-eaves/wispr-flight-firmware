@@ -17,6 +17,9 @@
 #include <AP_HAL/AP_HAL.h>
 #include "AP_BattMonitor.h"
 #include "AP_BattMonitor_Backend.h"
+#include <AP_AHRS/AP_AHRS.h>
+
+#include <iostream>
 
 /*
   base class constructor.
@@ -102,8 +105,8 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
 {
     const uint32_t now = AP_HAL::millis();
 
-    bool low_voltage, low_capacity, critical_voltage, critical_capacity;
-    check_failsafe_types(low_voltage, low_capacity, critical_voltage, critical_capacity);
+    bool low_voltage, low_capacity, critical_voltage, critical_capacity, custom_low_capacity;
+    check_failsafe_types(low_voltage, low_capacity, critical_voltage, critical_capacity, custom_low_capacity);
 
     if (critical_voltage) {
         // this is the first time our voltage has dropped below minimum so start timer
@@ -135,12 +138,32 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
         _state.low_voltage_start_ms = 0;
     }
 
-    if (low_capacity) {
+    if (custom_low_capacity){
         return AP_BattMonitor::BatteryFailsafe_Low;
     }
 
+    // if (low_capacity) {
+    //     return AP_BattMonitor::BatteryFailsafe_Low;
+    // }
+
     // if we've gotten this far then battery is ok
     return AP_BattMonitor::BatteryFailsafe_None;
+}
+
+
+static double _get_distance_to_home(void)
+{
+
+    const AP_AHRS &ahrs = AP::ahrs();
+
+    Location home_loc =  ahrs.get_home();
+
+    Location current_loc;
+    ahrs.get_position(current_loc);
+
+    double distance = current_loc.get_distance(home_loc);
+    return distance;
+    // _distance_to_destination = current_loc.get_distance(_destination);
 }
 
 static bool update_check(size_t buflen, char *buffer, bool failed, const char *message)
@@ -154,8 +177,8 @@ static bool update_check(size_t buflen, char *buffer, bool failed, const char *m
 
 bool AP_BattMonitor_Backend::arming_checks(char * buffer, size_t buflen) const
 {
-    bool low_voltage, low_capacity, critical_voltage, critical_capacity;
-    check_failsafe_types(low_voltage, low_capacity, critical_voltage, critical_capacity);
+    bool low_voltage, low_capacity, critical_voltage, critical_capacity, custom_low_capacity;
+    check_failsafe_types(low_voltage, low_capacity, critical_voltage, critical_capacity, custom_low_capacity);
 
     bool below_arming_voltage = is_positive(_params._arming_minimum_voltage) &&
                                 (_state.voltage < _params._arming_minimum_voltage);
@@ -176,11 +199,12 @@ bool AP_BattMonitor_Backend::arming_checks(char * buffer, size_t buflen) const
     result = result && update_check(buflen, buffer, below_arming_capacity, "below minimum arming capacity");
     result = result && update_check(buflen, buffer, fs_capacity_inversion, "capacity failsafe critical > low");
     result = result && update_check(buflen, buffer, fs_voltage_inversion, "voltage failsafe critical > low");
+    result = result && update_check(buflen, buffer, custom_low_capacity, "custom low capacity failsafe");
 
     return result;
 }
 
-void AP_BattMonitor_Backend::check_failsafe_types(bool &low_voltage, bool &low_capacity, bool &critical_voltage, bool &critical_capacity) const
+void AP_BattMonitor_Backend::check_failsafe_types(bool &low_voltage, bool &low_capacity, bool &critical_voltage, bool &critical_capacity, bool &custom_low_capacity) const
 {
     // use voltage or sag compensated voltage
     float voltage_used;
@@ -222,6 +246,16 @@ void AP_BattMonitor_Backend::check_failsafe_types(bool &low_voltage, bool &low_c
     } else {
         low_capacity = false;
     }
+
+    check_custom_failsafe(custom_low_capacity);
+
+}
+
+void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
+{
+    std::cout<<"Checking custom failsafe..."<<std::endl;
+    custom_failsafe = false;
+    return;
 }
 
 /*

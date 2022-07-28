@@ -72,8 +72,7 @@ protected:
 
     // checks what failsafes could be triggered
     void check_failsafe_types(bool &low_voltage, bool &low_capacity, bool &critical_voltage, bool &critical_capacity, bool &custom_low_capacity) const;
-    void check_custom_failsafe(bool &custom_failsafe) const;
-    // static double _get_distance_to_home(void);
+    double _get_distance_to_home(void) const;
 
 private:
     // resistance estimate
@@ -84,14 +83,24 @@ private:
     float       _resistance_voltage_ref; // voltage used for maximum resistance calculation
     float       _resistance_current_ref; // current used for maximum resistance calculation
 
-    float _rtl_speed;
-    float _wpnav_speed;
-    float _land_alt_low;
-    float _land_speed;
-    float _land_speed_high;
-    float _wpnav_speed_dn;
+    mutable float _rtl_speed;
+    mutable float _wpnav_speed;
+    mutable float _land_alt_low;
+    mutable float _land_speed;
+    mutable float _land_speed_high;
+    mutable float _wpnav_speed_dn;
+
+    mutable bool _rtl_speed_set = false;
+    mutable bool _wpnav_speed_set = false;
+    mutable bool _land_alt_low_set = false;
+    mutable bool _land_speed_set = false;
+    mutable bool _land_speed_high_set = false;
+    mutable bool _wpnav_speed_dn_set = false;
+
+    mutable float _initial_percent_remaining = 0;
 
     bool param_values_set() const;
-    void set_param_values() ;
+    void set_param_values() const;
+    void check_custom_failsafe(bool &custom_failsafe) const;
 
 };

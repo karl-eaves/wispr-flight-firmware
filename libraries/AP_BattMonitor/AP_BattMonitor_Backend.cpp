@@ -18,8 +18,10 @@
 #include "AP_BattMonitor.h"
 #include "AP_BattMonitor_Backend.h"
 #include <AP_AHRS/AP_AHRS.h>
+#include <AP_Stats/AP_Stats.h>
 
 #include <iostream>
+#include <vector>
 
 /*
   base class constructor.
@@ -114,16 +116,16 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
             _state.critical_voltage_start_ms = now;
         } else if (_params._low_voltage_timeout > 0 &&
                    now - _state.critical_voltage_start_ms > uint32_t(_params._low_voltage_timeout)*1000U) {
-            return AP_BattMonitor::BatteryFailsafe_Critical;
+            // return AP_BattMonitor::BatteryFailsafe_Critical;
         }
     } else {
         // acceptable voltage so reset timer
         _state.critical_voltage_start_ms = 0;
     }
 
-    if (critical_capacity) {
-        return AP_BattMonitor::BatteryFailsafe_Critical;
-    }
+    // if (critical_capacity) {
+    //     return AP_BattMonitor::BatteryFailsafe_Critical;
+    // }
 
     if (low_voltage) {
         // this is the first time our voltage has dropped below minimum so start timer
@@ -139,7 +141,8 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
     }
 
     if (custom_low_capacity){
-        return AP_BattMonitor::BatteryFailsafe_Low;
+        std::cout<<"LOW CAP ????"<<std::endl;
+        return AP_BattMonitor::BatteryFailsafe_Critical;
     }
 
     // if (low_capacity) {
@@ -151,20 +154,19 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
 }
 
 
-// static double _get_distance_to_home(void)
-// {
+double AP_BattMonitor_Backend::_get_distance_to_home(void) const
+{
 
-//     const AP_AHRS &ahrs = AP::ahrs();
+    const AP_AHRS &ahrs = AP::ahrs();
 
-//     Location home_loc =  ahrs.get_home();
+    Location home_loc =  ahrs.get_home();
 
-//     Location current_loc;
-//     ahrs.get_position(current_loc);
+    Location current_loc;
+    ahrs.get_position(current_loc);
 
-//     double distance = current_loc.get_distance(home_loc);
-//     return distance;
-//     // _distance_to_destination = current_loc.get_distance(_destination);
-// }
+    double distance = current_loc.get_distance(home_loc);
+    return distance;
+}
 
 static bool update_check(size_t buflen, char *buffer, bool failed, const char *message)
 {
@@ -234,6 +236,7 @@ void AP_BattMonitor_Backend::check_failsafe_types(bool &low_voltage, bool &low_c
     }
 
     if ((voltage_used > 0) && (_params._low_voltage > 0) && (voltage_used < _params._low_voltage)) {
+        std::cout<<"Low volt?"<<std::endl;
         low_voltage = true;
     } else {
         low_voltage = false;
@@ -253,21 +256,78 @@ void AP_BattMonitor_Backend::check_failsafe_types(bool &low_voltage, bool &low_c
 
 void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
 {
+
+    custom_failsafe = false;    // set failsafe to false so that it will be set if the function returns early
+
     if (!param_values_set()){
         set_param_values();
-        custom_failsafe = false;
         return;
     }
+
+    std::cout<<"Checking custom failsafe..."<<std::endl;
+
+    AP_Stats *stats = AP::stats();
+    uint32_t _flight_time = stats->get_flight_time_s();
+
+    if (_flight_time < 8) return;
+
+    const float _resting_voltage = voltage_resting_estimate();
+
+    float _adjusted_capacity_percent = -0.3568410913 * pow(_resting_voltage,4) + 35.0222463246 * pow(_resting_voltage,3) - 1290.1979687034 * pow(_resting_voltage,2) + 21157.7578769615 * _resting_voltage - 130310.4773939850;
+
+    std::cout<<"Adjusted cap percent: " << _adjusted_capacity_percent<<std::endl;
+
+
+    if ((int)_initial_percent_remaining == 0) _initial_percent_remaining = _adjusted_capacity_percent;
+
+    float _horizontal_velocity = ((int)_rtl_speed != 0) ? _rtl_speed : _wpnav_speed;
+    double _horizontal_distance = _get_distance_to_home();
+
+    const AP_AHRS &ahrs = AP::ahrs();
+    float _current_altitude = ahrs.get_home().alt;
+    ahrs.get_relative_position_D_home(_current_altitude);
+    _current_altitude = _current_altitude * -1; // altitude reported as negative; swap to positive;
+
+    std::cout<<"Current alt: " <<_current_altitude<<std::endl;
+
+    float _vertical_distance2 = _land_alt_low / 100;
+    float _vertical_velocity2 = _land_speed / 100;
+
+    if (_current_altitude < _vertical_distance2) _vertical_distance2 = _current_altitude;
+
+    float _vertical_distance1 = _current_altitude - _vertical_distance2;
+
+    if (_vertical_distance1 < 0) _vertical_distance1 = 0;
+
+    float _vertical_velocity1  = ((int)_land_speed_high != 0) ? _land_speed_high : _wpnav_speed_dn;
+
+    float _time_to_rtl = ((_horizontal_distance / _horizontal_velocity) + (_vertical_distance1 / _vertical_velocity1) + (_vertical_distance2 / _vertical_velocity2));
+
+
+
+    float _capacity_rate = (_initial_percent_remaining - _adjusted_capacity_percent) / _flight_time;
+
+    std::cout<<"Init percent: " << _initial_percent_remaining<<std::endl;
+    std::cout<<"Flgiht time: "<< _flight_time<<std::endl;
+    std::cout<<"Cap rate: " <<_capacity_rate<<std::endl;
+    if (_capacity_rate <=0) return;
+
+    float _time_until_twenty_percent_capacity = (_adjusted_capacity_percent - 20) / _capacity_rate;
+
+    std::cout<<"Time to RTL: " << _time_to_rtl<<std::endl;
+    std::cout<<"Time until 20%: " << _time_until_twenty_percent_capacity <<std::endl;
     
-    // std::cout<<"Checking custom failsafe..."<<std::endl;
-    custom_failsafe = false;
+    if (_time_to_rtl >= _time_until_twenty_percent_capacity){
+        std::cout<<"Custom battery failsafe triggered!"<<std::endl;
+        custom_failsafe = true;
+    }
 
     return;
 }
 
-bool AP_BattMonitor_Backend::param_values_set()
+bool AP_BattMonitor_Backend::param_values_set() const
 {
-    return _rtl_speed != NULL && _wpnav_speed != NULL && _land_alt_low != NULL && _land_speed != NULL && _land_speed_high != NULL && _wpnav_speed_dn != NULL;
+    return _rtl_speed_set && _wpnav_speed_set && _land_alt_low_set && _land_speed_set && _land_speed_high_set && _wpnav_speed_dn_set;
 }
 
 void AP_BattMonitor_Backend::set_param_values() const
@@ -275,65 +335,31 @@ void AP_BattMonitor_Backend::set_param_values() const
     enum ap_var_type p_type;
     AP_Param *vp;
 
-    // WPNAV_SPEED
-    char pn[AP_MAX_NAME_SIZE+1] = "WPNAV_SPEED";
-    pn[AP_MAX_NAME_SIZE] = 0;
-    vp = AP_Param::find(pn, &p_type);
-    if (vp == NULL) {
-    }
-    else {
-        _wpnav_speed = vp->cast_to_float(p_type);
+    std::vector<std::string> parameter_names = {"WPNAV_SPEED", "RTL_SPEED", "LAND_ALT_LOW", "LAND_SPEED_HIGH", "WPNAV_SPEED_DN", "LAND_SPEED"};
+    std::vector<float*> parameter_values = {&_wpnav_speed, &_rtl_speed, &_land_alt_low, &_land_speed_high, &_wpnav_speed_dn, &_land_speed};
+    std::vector<bool*> parameter_values_set = {&_wpnav_speed_set, &_rtl_speed_set, &_land_alt_low_set, &_land_speed_high_set, &_wpnav_speed_dn_set, &_land_speed_set};
+
+    for (uint i = 0; i < parameter_names.size(); i++)
+    {
+        // WPNAV_SPEED
+        char param_name[AP_MAX_NAME_SIZE+1];
+        memset(param_name, 0, sizeof param_name);
+
+        strncpy(param_name, parameter_names[i].c_str(), parameter_names[i].length());
+        // param_name = "WPNAV_SPEED";
+        // param_name[AP_MAX_NAME_SIZE] = 0;
+        vp = AP_Param::find(param_name, &p_type);
+        if (vp != NULL) {
+            *parameter_values[i] = vp->cast_to_float(p_type);
+            *parameter_values_set[i] = true;
+        }
+
+        memset(param_name, 0, sizeof param_name);
     }
 
-    // RTL_SPEED
-    char pn[AP_MAX_NAME_SIZE+1] = "RTL_SPEED";
-    pn[AP_MAX_NAME_SIZE] = 0;
-    vp = AP_Param::find(pn, &p_type);
-    if (vp == NULL) {
-    }
-    else {
-        _rtl_speed = vp->cast_to_float(p_type);
-    }
-
-    // LAND_ALT_LOW
-    char pn[AP_MAX_NAME_SIZE+1] = "LAND_ALT_LOW";
-    pn[AP_MAX_NAME_SIZE] = 0;
-    vp = AP_Param::find(pn, &p_type);
-    if (vp == NULL) {
-    }
-    else {
-        _land_alt_low = vp->cast_to_float(p_type);
-    }
-
-    // LAND_SPEED_HIGH
-    char pn[AP_MAX_NAME_SIZE+1] = "LAND_SPEED_HIGH";
-    pn[AP_MAX_NAME_SIZE] = 0;
-    vp = AP_Param::find(pn, &p_type);
-    if (vp == NULL) {
-    }
-    else {
-        _land_speed_high = vp->cast_to_float(p_type);
-    }
-
-    // WPNAV_SPEED_DN
-    char pn[AP_MAX_NAME_SIZE+1] = "WPNAV_SPEED_DN";
-    pn[AP_MAX_NAME_SIZE] = 0;
-    vp = AP_Param::find(pn, &p_type);
-    if (vp == NULL) {
-    }
-    else {
-        _wpnav_speed_dn = vp->cast_to_float(p_type);
-    }
-
-    // LAND_SPEED
-    char pn[AP_MAX_NAME_SIZE+1] = "LAND_SPEED";
-    pn[AP_MAX_NAME_SIZE] = 0;
-    vp = AP_Param::find(pn, &p_type);
-    if (vp == NULL) {
-    }
-    else {
-        _land_speed = vp->cast_to_float(p_type);
-    }
+    parameter_names.clear();
+    parameter_values.clear();
+    parameter_values_set.clear();
 }
 
 /*

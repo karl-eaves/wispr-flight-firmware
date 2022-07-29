@@ -20,8 +20,13 @@
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_Stats/AP_Stats.h>
 
-#include <iostream>
 #include <vector>
+
+
+struct String {
+  char a[AP_MAX_NAME_SIZE+1];
+};
+
 
 /*
   base class constructor.
@@ -141,7 +146,6 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
     }
 
     if (custom_low_capacity){
-        std::cout<<"LOW CAP ????"<<std::endl;
         return AP_BattMonitor::BatteryFailsafe_Critical;
     }
 
@@ -236,7 +240,6 @@ void AP_BattMonitor_Backend::check_failsafe_types(bool &low_voltage, bool &low_c
     }
 
     if ((voltage_used > 0) && (_params._low_voltage > 0) && (voltage_used < _params._low_voltage)) {
-        std::cout<<"Low volt?"<<std::endl;
         low_voltage = true;
     } else {
         low_voltage = false;
@@ -264,8 +267,6 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
         return;
     }
 
-    std::cout<<"Checking custom failsafe..."<<std::endl;
-
     AP_Stats *stats = AP::stats();
     uint32_t _flight_time = stats->get_flight_time_s();
 
@@ -273,10 +274,7 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
 
     const float _resting_voltage = voltage_resting_estimate();
 
-    float _adjusted_capacity_percent = -0.3568410913 * pow(_resting_voltage,4) + 35.0222463246 * pow(_resting_voltage,3) - 1290.1979687034 * pow(_resting_voltage,2) + 21157.7578769615 * _resting_voltage - 130310.4773939850;
-
-    std::cout<<"Adjusted cap percent: " << _adjusted_capacity_percent<<std::endl;
-
+    float _adjusted_capacity_percent = -0.3568410913 * powf(_resting_voltage,4) + 35.0222463246 * powf(_resting_voltage,3) - 1290.1979687034 * powf(_resting_voltage,2) + 21157.7578769615 * _resting_voltage - 130310.4773939850;
 
     if ((int)_initial_percent_remaining == 0) _initial_percent_remaining = _adjusted_capacity_percent;
 
@@ -287,8 +285,6 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
     float _current_altitude = ahrs.get_home().alt;
     ahrs.get_relative_position_D_home(_current_altitude);
     _current_altitude = _current_altitude * -1; // altitude reported as negative; swap to positive;
-
-    std::cout<<"Current alt: " <<_current_altitude<<std::endl;
 
     float _vertical_distance2 = _land_alt_low / 100;
     float _vertical_velocity2 = _land_speed / 100;
@@ -307,18 +303,11 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
 
     float _capacity_rate = (_initial_percent_remaining - _adjusted_capacity_percent) / _flight_time;
 
-    std::cout<<"Init percent: " << _initial_percent_remaining<<std::endl;
-    std::cout<<"Flgiht time: "<< _flight_time<<std::endl;
-    std::cout<<"Cap rate: " <<_capacity_rate<<std::endl;
     if (_capacity_rate <=0) return;
 
     float _time_until_twenty_percent_capacity = (_adjusted_capacity_percent - 20) / _capacity_rate;
 
-    std::cout<<"Time to RTL: " << _time_to_rtl<<std::endl;
-    std::cout<<"Time until 20%: " << _time_until_twenty_percent_capacity <<std::endl;
-    
     if (_time_to_rtl >= _time_until_twenty_percent_capacity){
-        std::cout<<"Custom battery failsafe triggered!"<<std::endl;
         custom_failsafe = true;
     }
 
@@ -335,17 +324,31 @@ void AP_BattMonitor_Backend::set_param_values() const
     enum ap_var_type p_type;
     AP_Param *vp;
 
-    std::vector<std::string> parameter_names = {"WPNAV_SPEED", "RTL_SPEED", "LAND_ALT_LOW", "LAND_SPEED_HIGH", "WPNAV_SPEED_DN", "LAND_SPEED"};
+    String WPNAV_SPEED;
+    String RTL_SPEED;
+    String LAND_ALT_LOW;
+    String LAND_SPEED_HIGH;
+    String WPNAV_SPEED_DN;
+    String LAND_SPEED;
+
+    strncpy(WPNAV_SPEED.a,      "WPNAV_SPEED",      sizeof "WPNAV_SPEED");
+    strncpy(RTL_SPEED.a,        "RTL_SPEED",        sizeof "RTL_SPEED");
+    strncpy(LAND_ALT_LOW.a,     "LAND_ALT_LOW",     sizeof "LAND_ALT_LOW");
+    strncpy(LAND_SPEED_HIGH.a,  "LAND_SPEED_HIGH",  sizeof "LAND_SPEED_HIGH");
+    strncpy(WPNAV_SPEED_DN.a,   "WPNAV_SPEED_DN",   sizeof "WPNAV_SPEED_DN");
+    strncpy(LAND_SPEED.a,       "LAND_SPEED",       sizeof "LAND_SPEED");
+
+    std::vector<String> parameter_names = {WPNAV_SPEED, RTL_SPEED, LAND_ALT_LOW, LAND_SPEED_HIGH, WPNAV_SPEED_DN, LAND_SPEED};
     std::vector<float*> parameter_values = {&_wpnav_speed, &_rtl_speed, &_land_alt_low, &_land_speed_high, &_wpnav_speed_dn, &_land_speed};
     std::vector<bool*> parameter_values_set = {&_wpnav_speed_set, &_rtl_speed_set, &_land_alt_low_set, &_land_speed_high_set, &_wpnav_speed_dn_set, &_land_speed_set};
 
-    for (uint i = 0; i < parameter_names.size(); i++)
+    for (int i = 0; i < parameter_names.size(); i++)
     {
         // WPNAV_SPEED
         char param_name[AP_MAX_NAME_SIZE+1];
         memset(param_name, 0, sizeof param_name);
 
-        strncpy(param_name, parameter_names[i].c_str(), parameter_names[i].length());
+        strncpy(param_name, parameter_names[i].a, sizeof parameter_names[i]);
         // param_name = "WPNAV_SPEED";
         // param_name[AP_MAX_NAME_SIZE] = 0;
         vp = AP_Param::find(param_name, &p_type);

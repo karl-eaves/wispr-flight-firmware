@@ -20,7 +20,6 @@
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Notify/AP_Notify.h>
 
-#include <iostream>
 #include <AP_Param/AP_Param.h>
 
 #include <AR_WPNav/AR_WPNav.h>
@@ -196,13 +195,8 @@ AP_BattMonitor::init()
 
 void AP_BattMonitor::convert_params(void) {
     
-
-    std::cout<<"_params._low_voltage: " <<_params[0]._low_voltage<<std::endl;
-    // std::cout<<"_extra_params._wpnav_speed: " <<_extra_params._wpnav_speed<<std::endl;
-
     if (_params[0]._type.configured_in_storage()) {
         // _params[0]._type will always be configured in storage after conversion is done the first time
-        std::cout<<"hizza"<<std::endl;
         return;
     }
 

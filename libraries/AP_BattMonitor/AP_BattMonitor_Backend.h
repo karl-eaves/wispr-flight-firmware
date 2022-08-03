@@ -97,7 +97,14 @@ private:
     mutable bool _land_speed_high_set = false;
     mutable bool _wpnav_speed_dn_set = false;
 
+    mutable float _capacity_rate = 0;
+    mutable uint32_t _time_of_capacity_rate_update;
+
     mutable float _initial_percent_remaining = 0;
+
+    const uint32_t _capacity_rate_time_period_ms = 15000;
+
+    void set_capacity_rate(float adjusted_capacity_percent) const;
 
     bool param_values_set() const;
     void set_param_values() const;

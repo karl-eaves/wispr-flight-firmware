@@ -22,7 +22,6 @@
 
 #include <vector>
 
-
 struct String {
   char a[AP_MAX_NAME_SIZE+1];
 };
@@ -299,9 +298,15 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
 
     float _time_to_rtl = ((_horizontal_distance / _horizontal_velocity) + (_vertical_distance1 / _vertical_velocity1) + (_vertical_distance2 / _vertical_velocity2));
 
+    // Capacity rate has not been set yet or is set to a negative value due to battery reading incorrectly
+    if (_capacity_rate <= 0){
+        set_capacity_rate(_adjusted_capacity_percent);
+    }
 
-
-    float _capacity_rate = (_initial_percent_remaining - _adjusted_capacity_percent) / _flight_time;
+    // Capacity rate needs to be updated
+    if (AP_HAL::millis() - _time_of_capacity_rate_update > _capacity_rate_time_period_ms){
+        set_capacity_rate(_adjusted_capacity_percent);
+    }
 
     if (_capacity_rate <=0) return;
 
@@ -312,6 +317,13 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
     }
 
     return;
+}
+
+void AP_BattMonitor_Backend::set_capacity_rate(float adjusted_capacity_percent) const {
+    
+    _capacity_rate = (_initial_percent_remaining - adjusted_capacity_percent) / (_capacity_rate_time_period_ms / 1000);
+    _initial_percent_remaining = adjusted_capacity_percent;
+    _time_of_capacity_rate_update = AP_HAL::millis();
 }
 
 bool AP_BattMonitor_Backend::param_values_set() const
@@ -342,7 +354,7 @@ void AP_BattMonitor_Backend::set_param_values() const
     std::vector<float*> parameter_values = {&_wpnav_speed, &_rtl_speed, &_land_alt_low, &_land_speed_high, &_wpnav_speed_dn, &_land_speed};
     std::vector<bool*> parameter_values_set = {&_wpnav_speed_set, &_rtl_speed_set, &_land_alt_low_set, &_land_speed_high_set, &_wpnav_speed_dn_set, &_land_speed_set};
 
-    for (int i = 0; i < parameter_names.size(); i++)
+    for (uint32_t i = 0; i < parameter_names.size(); i++)
     {
         // WPNAV_SPEED
         char param_name[AP_MAX_NAME_SIZE+1];

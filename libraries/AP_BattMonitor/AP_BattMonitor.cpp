@@ -366,6 +366,7 @@ int32_t AP_BattMonitor::pack_capacity_mah(uint8_t instance) const
 
 void AP_BattMonitor::check_failsafes(void)
 {
+
     if (hal.util->get_soft_armed()) {
         for (uint8_t i = 0; i < _num_instances; i++) {
             if (drivers[i] == nullptr) {
@@ -392,8 +393,8 @@ void AP_BattMonitor::check_failsafes(void)
                     break;
             }
 
-            gcs().send_text(MAV_SEVERITY_WARNING, "Battery %d is %s %.2fV used %.0f mAh", i + 1, type_str,
-                            (double)voltage(i), (double)state[i].consumed_mah);
+            gcs().send_text(MAV_SEVERITY_ALERT, "Battery at critical level. Triggering RTL.");
+
             _has_triggered_failsafe = true;
             AP_Notify::flags.failsafe_battery = true;
             state[i].failsafe = type;

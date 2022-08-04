@@ -310,7 +310,7 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
 
     if (_capacity_rate <=0) return;
 
-    float _time_until_twenty_percent_capacity = (_adjusted_capacity_percent - 20) / _capacity_rate;
+    float _time_until_twenty_percent_capacity = (_adjusted_capacity_percent - _CAPACITY_TO_LAND) / _capacity_rate;
 
     if (_time_to_rtl >= _time_until_twenty_percent_capacity){
         custom_failsafe = true;

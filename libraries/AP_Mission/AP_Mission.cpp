@@ -880,7 +880,7 @@ MAV_MISSION_RESULT AP_Mission::mavlink_int_to_mission_cmd(const mavlink_mission_
         cmd.content.digicam_configure.aperture = packet.param3;
         cmd.content.digicam_configure.ISO = packet.param4;
         cmd.content.digicam_configure.exposure_type = packet.x;
-        cmd.content.digicam_configure.cmd_id = packet.y;
+        cmd.content.digicam_configure.cmd_id = packet.y * 1.0e-7f;
         cmd.content.digicam_configure.engine_cutoff_time = packet.z;
         break;
 
@@ -1141,6 +1141,7 @@ MAV_MISSION_RESULT AP_Mission::mavlink_cmd_long_to_mission_cmd(const mavlink_com
 //  return true on success, false on failure
 bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& cmd, mavlink_mission_item_int_t& packet)
 {
+
     // command's position in mission list and mavlink id
     packet.seq = cmd.index;
     packet.command = cmd.id;
@@ -1307,13 +1308,15 @@ bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& c
         break;
 
     case MAV_CMD_DO_DIGICAM_CONFIGURE:                  // MAV ID: 202
+
         packet.param1 = cmd.content.digicam_configure.shooting_mode;
         packet.param2 = cmd.content.digicam_configure.shutter_speed;
         packet.param3 = cmd.content.digicam_configure.aperture;
         packet.param4 = cmd.content.digicam_configure.ISO;
         packet.x = cmd.content.digicam_configure.exposure_type;
-        packet.y = cmd.content.digicam_configure.cmd_id;
+        packet.y = cmd.content.digicam_configure.cmd_id * 1.0e7f;
         packet.z = cmd.content.digicam_configure.engine_cutoff_time;
+
         break;
 
     case MAV_CMD_DO_DIGICAM_CONTROL:                    // MAV ID: 203

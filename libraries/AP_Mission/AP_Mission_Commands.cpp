@@ -80,6 +80,7 @@ bool AP_Mission::start_command_camera(const AP_Mission::Mission_Command& cmd)
     switch (cmd.id) {
 
     case MAV_CMD_DO_DIGICAM_CONFIGURE:                  // Mission command to configure an on-board camera controller system. |Modes: P, TV, AV, M, Etc| Shutter speed: Divisor number for one second| Aperture: F stop number| ISO number e.g. 80, 100, 200, Etc| Exposure type enumerator| Command Identity| Main engine cut-off time before camera trigger in seconds/10 (0 means no cut-off)|
+                
         camera->configure(
             cmd.content.digicam_configure.shooting_mode,
             cmd.content.digicam_configure.shutter_speed,

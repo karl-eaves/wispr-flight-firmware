@@ -111,12 +111,12 @@ public:
 
     // digicam control command structure
     struct PACKED Digicam_Configure {
-        uint8_t shooting_mode;  // ProgramAuto = 1, AV = 2, TV = 3, Man=4, IntelligentAuto=5, SuperiorAuto=6
+        uint16_t shooting_mode;  // ProgramAuto = 1, AV = 2, TV = 3, Man=4, IntelligentAuto=5, SuperiorAuto=6
         uint16_t shutter_speed;
         uint8_t aperture;       // F stop number * 10
         uint16_t ISO;           // 80, 100, 200, etc
         uint8_t exposure_type;
-        uint8_t cmd_id;
+        uint16_t cmd_id;
         float engine_cutoff_time;   // seconds
     };
 

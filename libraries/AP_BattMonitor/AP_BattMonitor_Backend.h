@@ -104,7 +104,7 @@ private:
 
     const uint32_t _capacity_rate_time_period_ms = 15000;
 
-    const uint32_t _CAPACITY_TO_LAND = 20;
+    const uint32_t _CAPACITY_TO_LAND = 22;
 
     void set_capacity_rate(float adjusted_capacity_percent) const;
 

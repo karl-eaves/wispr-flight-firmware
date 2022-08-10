@@ -70,6 +70,24 @@ bool AP_Mission::start_command_do_servorelayevents(const AP_Mission::Mission_Com
     }
 }
 
+bool AP_Mission::release_gimbal_control()
+{
+    AP_Camera *camera = AP::camera();
+    if (camera == nullptr) {
+        return false;
+    }
+
+    camera->configure(
+        3002,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0);
+    return true;
+}
+
 bool AP_Mission::start_command_camera(const AP_Mission::Mission_Command& cmd)
 {
     AP_Camera *camera = AP::camera();

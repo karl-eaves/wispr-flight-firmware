@@ -79,6 +79,7 @@ void AP_Mission::start()
 /// stop - stops mission execution.  subsequent calls to update() will have no effect until the mission is started or resumed
 void AP_Mission::stop()
 {
+    release_gimbal_control();
     _flags.state = MISSION_STOPPED;
 }
 
@@ -1459,6 +1460,10 @@ bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& c
 /// complete - mission is marked complete and clean-up performed including calling the mission_complete_fn
 void AP_Mission::complete()
 {
+
+    // release gimbal control to SBUS
+    release_gimbal_control();
+
     // flag mission as complete
     _flags.state = MISSION_COMPLETE;
 

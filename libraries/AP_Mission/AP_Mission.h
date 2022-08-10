@@ -116,7 +116,7 @@ public:
         uint8_t aperture;       // F stop number * 10
         uint16_t ISO;           // 80, 100, 200, etc
         uint8_t exposure_type;
-        uint16_t cmd_id;
+        int16_t cmd_id;
         float engine_cutoff_time;   // seconds
     };
 
@@ -594,6 +594,9 @@ private:
     bool start_command_do_servorelayevents(const AP_Mission::Mission_Command& cmd);
     bool start_command_camera(const AP_Mission::Mission_Command& cmd);
     bool start_command_parachute(const AP_Mission::Mission_Command& cmd);
+
+    bool release_gimbal_control();
+
 };
 
 namespace AP {

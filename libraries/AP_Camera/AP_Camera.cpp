@@ -247,6 +247,15 @@ void AP_Camera::configure(float shooting_mode, float shutter_speed, float apertu
     // and send to all components in case they and process it
     mavlink_command_long_t mav_cmd_long = {};
 
+    if (shooting_mode >= 3001 && shooting_mode < 3002){
+        if (cmd_id > 45){
+            cmd_id = 45;
+        }
+        if (cmd_id < -90){
+            cmd_id = -90;
+        }
+    }
+
     // convert mission command to mavlink command_long
     mav_cmd_long.command = MAV_CMD_DO_DIGICAM_CONFIGURE;
     mav_cmd_long.param1 = shooting_mode;

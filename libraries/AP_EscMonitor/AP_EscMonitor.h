@@ -1,0 +1,172 @@
+#pragma once
+
+#include <AP_Common/AP_Common.h>
+#include <AP_Param/AP_Param.h>
+#include <AP_Math/AP_Math.h>
+#include <GCS_MAVLink/GCS_MAVLink.h>
+
+// maximum number of battery monitors
+#define AP_BATT_MONITOR_MAX_INSTANCES       9
+
+// first monitor is always the primary monitor
+#define AP_BATT_PRIMARY_INSTANCE            0
+
+#define AP_BATT_SERIAL_NUMBER_DEFAULT       -1
+
+#define AP_BATT_MONITOR_TIMEOUT             5000
+
+#define AP_BATT_MONITOR_RES_EST_TC_1        0.5f
+#define AP_BATT_MONITOR_RES_EST_TC_2        0.1f
+
+#ifndef HAL_BATTMON_SMBUS_ENABLE
+#define HAL_BATTMON_SMBUS_ENABLE 1
+#endif
+
+#ifndef HAL_BATTMON_FUEL_ENABLE
+#define HAL_BATTMON_FUEL_ENABLE 1
+#endif
+
+class AP_EscMonitor
+{
+
+public:
+
+    // battery failsafes must be defined in levels of severity so that vehicles wont fall backwards
+    enum BatteryFailsafe {
+        BatteryFailsafe_None = 0,
+        BatteryFailsafe_Low,
+        BatteryFailsafe_Critical
+    };
+
+    FUNCTOR_TYPEDEF(esc_failsafe_handler_fn_t, void);
+
+    AP_EscMonitor(esc_failsafe_handler_fn_t battery_failsafe_handler_fn);
+
+    /* Do not allow copies */
+    AP_EscMonitor(const AP_EscMonitor &other) = delete;
+    AP_EscMonitor &operator=(const AP_EscMonitor&) = delete;
+
+    static AP_EscMonitor *get_singleton() {
+        return _singleton;
+    }
+
+    struct cells {
+        uint16_t cells[MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_LEN];
+    };
+
+    // The BattMonitor_State structure is filled in by the backend driver
+    struct BattMonitor_State {
+        cells       cell_voltages;             // battery cell voltages in millivolts, 10 cells matches the MAVLink spec
+        float       voltage;                   // voltage in volts
+        float       current_amps;              // current in amperes
+        float       consumed_mah;              // total current draw in milliamp hours since start-up
+        float       consumed_wh;               // total energy consumed in Wh since start-up
+        uint32_t    last_time_micros;          // time when voltage and current was last read in microseconds
+        uint32_t    low_voltage_start_ms;      // time when voltage dropped below the minimum in milliseconds
+        uint32_t    critical_voltage_start_ms; // critical voltage failsafe start timer in milliseconds
+        float       temperature;               // battery temperature in degrees Celsius
+        uint32_t    temperature_time;          // timestamp of the last received temperature message
+        float       voltage_resting_estimate;  // voltage with sag removed based on current and resistance estimate in Volt
+        float       resistance;                // resistance, in Ohms, calculated by comparing resting voltage vs in flight voltage
+        BatteryFailsafe failsafe;              // stage failsafe the battery is in
+        bool        healthy;                   // battery monitor is communicating correctly
+        bool        is_powering_off;           // true when power button commands power off
+        bool        powerOffNotified;          // only send powering off notification once
+    };
+
+    // Return the number of battery monitor instances
+    uint8_t num_instances(void) const { return _num_instances; }
+
+    // detect and initialise any available battery monitors
+    void init();
+
+    /// Read the battery voltage and current for all batteries.  Should be called at 10hz
+    void read();
+
+    // healthy - returns true if monitor is functioning
+    bool healthy(uint8_t instance) const;
+    bool healthy() const { return healthy(AP_BATT_PRIMARY_INSTANCE); }
+
+    /// voltage - returns battery voltage in millivolts
+    float voltage(uint8_t instance) const;
+    float voltage() const { return voltage(AP_BATT_PRIMARY_INSTANCE); }
+
+    /// get voltage with sag removed (based on battery current draw and resistance)
+    /// this will always be greater than or equal to the raw voltage
+    float voltage_resting_estimate(uint8_t instance) const;
+    float voltage_resting_estimate() const { return voltage_resting_estimate(AP_BATT_PRIMARY_INSTANCE); }
+
+    /// current_amps - returns the instantaneous current draw in amperes
+    bool current_amps(float &current, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
+
+    /// consumed_mah - returns total current drawn since start-up in milliampere.hours
+    bool consumed_mah(float &mah, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
+
+    /// consumed_wh - returns total energy drawn since start-up in watt.hours
+    bool consumed_wh(float&wh, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
+
+    /// capacity_remaining_pct - returns the % battery capacity remaining (0 ~ 100)
+    virtual uint8_t capacity_remaining_pct(uint8_t instance) const;
+    uint8_t capacity_remaining_pct() const { return capacity_remaining_pct(AP_BATT_PRIMARY_INSTANCE); }
+
+    /// pack_capacity_mah - returns the capacity of the battery pack in mAh when the pack is full
+    int32_t pack_capacity_mah(uint8_t instance) const;
+    int32_t pack_capacity_mah() const { return pack_capacity_mah(AP_BATT_PRIMARY_INSTANCE); }
+ 
+    /// returns true if a battery failsafe has ever been triggered
+    bool has_failsafed(void) const { return _has_triggered_failsafe; };
+
+    /// returns the highest failsafe action that has been triggered
+    int8_t get_highest_failsafe_priority(void) const { return _highest_failsafe_priority; };
+
+    /// get_type - returns battery monitor type
+    enum AP_EscMonitor_Params::BattMonitor_Type get_type() const { return get_type(AP_BATT_PRIMARY_INSTANCE); }
+    enum AP_EscMonitor_Params::BattMonitor_Type get_type(uint8_t instance) const { return _params[instance].type(); }
+
+    /// true when (voltage * current) > watt_max
+    bool overpower_detected() const;
+    bool overpower_detected(uint8_t instance) const;
+
+    // cell voltages
+    bool has_cell_voltages() { return has_cell_voltages(AP_BATT_PRIMARY_INSTANCE); }
+    bool has_cell_voltages(const uint8_t instance) const;
+    const cells & get_cell_voltages() const { return get_cell_voltages(AP_BATT_PRIMARY_INSTANCE); }
+    const cells & get_cell_voltages(const uint8_t instance) const;
+
+    // temperature
+    bool get_temperature(float &temperature) const { return get_temperature(temperature, AP_BATT_PRIMARY_INSTANCE); }
+    bool get_temperature(float &temperature, const uint8_t instance) const;
+
+    // cycle count
+    bool get_cycle_count(uint8_t instance, uint16_t &cycles) const;
+
+    // get battery resistance estimate in ohms
+    float get_resistance() const { return get_resistance(AP_BATT_PRIMARY_INSTANCE); }
+    float get_resistance(uint8_t instance) const { return state[instance].resistance; }
+
+    // returns false if we fail arming checks, in which case the buffer will be populated with a failure message
+    bool arming_checks(size_t buflen, char *buffer) const;
+
+
+private:
+    static AP_EscMonitor *_singleton;
+
+    uint8_t     _num_instances;                                     /// number of monitors
+
+
+    /// returns the failsafe state of the battery
+    BatteryFailsafe check_failsafe(const uint8_t instance);
+    void check_failsafes(void); // checks all batteries failsafes
+
+    esc_failsafe_handler_fn_t _battery_failsafe_handler_fn;
+    const int8_t *_failsafe_priorities; // array of failsafe priorities, sorted highest to lowest priority, -1 indicates no more entries
+
+    int8_t      _highest_failsafe_priority; // highest selected failsafe action level (used to restrict what actions we move into)
+    bool        _has_triggered_failsafe;  // true after a battery failsafe has been triggered for the first time
+
+};
+
+namespace AP {
+    AP_EscMonitor &battery();
+};
+

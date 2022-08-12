@@ -66,7 +66,9 @@ public:
 
     // send ESC telemetry messages over MAVLink
     void send_esc_telemetry_mavlink(uint8_t mav_chan);
-    void check_failsafes();
+    bool check_esc_temperature_reached_threshold();
+
+();
 
 private:
     static AP_BLHeli *_singleton;
@@ -252,7 +254,7 @@ private:
     uint32_t last_telem_byte_read_us;
     int8_t last_control_port;
 
-    uint8_t const _ESC_TEMPERATURE_RTL_THRESHOLD = 100;
+    uint8_t const _ESC_TEMPERATURE_RTL_THRESHOLD = 60;
 
     bool msp_process_byte(uint8_t c);
     void blheli_crc_update(uint8_t c);

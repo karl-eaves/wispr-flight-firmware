@@ -68,7 +68,7 @@
 #include <AC_AutoTune/AC_AutoTune.h>
 #include <AP_Common/AP_FWVersion.h>
 
-#include <AP_EscMonitor/AP_EscMonitor.h>     // Battery monitor library
+#include <AP_EscMonitor/AP_EscMonitor.h>
 
 
 // Configuration
@@ -459,7 +459,7 @@ private:
                            _failsafe_priorities};
 
     // ESC Sensors
-    AP_EscMonitor battery{FUNCTOR_BIND_MEMBER(&Copter::handle_esc_failsafe, void)};
+    AP_EscMonitor esc{FUNCTOR_BIND_MEMBER(&Copter::handle_esc_failsafe, void)};
 
 #if OSD_ENABLED == ENABLED
     AP_OSD osd;
@@ -665,6 +665,7 @@ private:
     void fast_loop();
     void rc_loop();
     void throttle_loop();
+    void check_esc_failsafe(void);
     void update_batt_compass(void);
     void fourhundred_hz_logging();
     void ten_hz_logging_loop();

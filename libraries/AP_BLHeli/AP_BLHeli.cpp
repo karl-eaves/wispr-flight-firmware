@@ -32,7 +32,6 @@
 #include <AP_SerialManager/AP_SerialManager.h>
 #include <AP_Logger/AP_Logger.h>
 
-#include <iostream>
 
 extern const AP_HAL::HAL& hal;
 
@@ -1505,12 +1504,12 @@ void AP_BLHeli::send_esc_telemetry_mavlink(uint8_t mav_chan)
 
 /*
   Checks if any ESC temperature is greater than the ESC temp RTL threshold. 
-  If so, sends message to GCS and issues RTL.
+  If so, returns true.
  */
-void AP_BLHeli::check_esc_temperature_threshold()
+bool AP_BLHeli::check_esc_temperature_reached_threshold()
 {
     if (num_motors == 0) {
-        return;
+        return false;
     }
     uint8_t temperature[4] {};
     uint16_t voltage[4] {};
@@ -1525,11 +1524,12 @@ void AP_BLHeli::check_esc_temperature_threshold()
         if (last_telem[i].timestamp_ms && (now - last_telem[i].timestamp_ms < 1000)) {
             if (last_telem[i].temperature >= _ESC_TEMPERATURE_RTL_THRESHOLD){
                 //Issue RTL
-                std::cout<<"Issue RTL"<<std::endl;
-                
+                return true;
             }
         }
     }
+
+    return false;
 }
 
 

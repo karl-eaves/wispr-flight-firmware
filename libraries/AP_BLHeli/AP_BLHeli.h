@@ -68,8 +68,6 @@ public:
     void send_esc_telemetry_mavlink(uint8_t mav_chan);
     bool check_esc_temperature_reached_threshold();
 
-();
-
 private:
     static AP_BLHeli *_singleton;
     

@@ -1511,15 +1511,9 @@ bool AP_BLHeli::check_esc_temperature_reached_threshold()
     if (num_motors == 0) {
         return false;
     }
-    uint8_t temperature[4] {};
-    uint16_t voltage[4] {};
-    uint16_t current[4] {};
-    uint16_t totalcurrent[4] {};
-    uint16_t rpm[4] {};
-    uint16_t count[4] {};
+    
     uint32_t now = AP_HAL::millis();
     for (uint8_t i=0; i<num_motors; i++) {
-        uint8_t idx = i % 4;
 
         if (last_telem[i].timestamp_ms && (now - last_telem[i].timestamp_ms < 1000)) {
             if (last_telem[i].temperature >= _ESC_TEMPERATURE_RTL_THRESHOLD){

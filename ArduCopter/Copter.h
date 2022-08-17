@@ -68,6 +68,9 @@
 #include <AC_AutoTune/AC_AutoTune.h>
 #include <AP_Common/AP_FWVersion.h>
 
+#include <AP_EscMonitor/AP_EscMonitor.h>
+
+
 // Configuration
 #include "defines.h"
 #include "config.h"
@@ -421,7 +424,7 @@ private:
     } failsafe;
 
     bool any_failsafe_triggered() const {
-        return failsafe.radio || battery.has_failsafed() || failsafe.gcs || failsafe.ekf || failsafe.terrain || failsafe.adsb;
+        return failsafe.radio || battery.has_failsafed() || failsafe.gcs || failsafe.ekf || failsafe.terrain || failsafe.adsb || esc.has_failsafed();
     }
 
     // sensor health for logging
@@ -454,6 +457,9 @@ private:
     AP_BattMonitor battery{MASK_LOG_CURRENT,
                            FUNCTOR_BIND_MEMBER(&Copter::handle_battery_failsafe, void, const char*, const int8_t),
                            _failsafe_priorities};
+
+    // ESC Sensors
+    AP_EscMonitor esc{FUNCTOR_BIND_MEMBER(&Copter::handle_esc_failsafe, void)};
 
 #if OSD_ENABLED == ENABLED
     AP_OSD osd;
@@ -659,6 +665,7 @@ private:
     void fast_loop();
     void rc_loop();
     void throttle_loop();
+    void check_esc_failsafe(void);
     void update_batt_compass(void);
     void fourhundred_hz_logging();
     void ten_hz_logging_loop();
@@ -728,6 +735,8 @@ private:
     void failsafe_radio_on_event();
     void failsafe_radio_off_event();
     void handle_battery_failsafe(const char* type_str, const int8_t action);
+    void handle_esc_failsafe();
+
     void failsafe_gcs_check();
     void failsafe_gcs_on_event(void);
     void failsafe_gcs_off_event(void);

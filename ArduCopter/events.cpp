@@ -82,6 +82,31 @@ void Copter::failsafe_radio_off_event()
     gcs().send_text(MAV_SEVERITY_WARNING, "Radio Failsafe Cleared");
 }
 
+void Copter::handle_esc_failsafe()
+{
+    AP::logger().Write_Error(LogErrorSubsystem::FAILSAFE_ESC, LogErrorCode::FAILSAFE_OCCURRED);
+
+    Failsafe_Action desired_action = (Failsafe_Action)2;
+
+    gcs().send_text(MAV_SEVERITY_ALERT, "ESC temperature at critical level. Triggering RTL.");
+
+
+    // Conditions to deviate from BATT_FS_XXX_ACT parameter setting
+    if (should_disarm_on_failsafe()) {
+        // should immediately disarm when we're on the ground
+        arming.disarm();
+        desired_action = Failsafe_Action_None;
+
+    } else if (flightmode->is_landing() && failsafe_option(FailsafeOption::CONTINUE_IF_LANDING) && desired_action != Failsafe_Action_None) {
+        // Allow landing to continue when FS_OPTIONS is set to continue when landing
+        desired_action = Failsafe_Action_Land;
+    } 
+
+    // Battery FS options already use the Failsafe_Options enum. So use them directly.
+    do_failsafe_action(desired_action, ModeReason::ESC_FAILSAFE);
+
+}
+
 void Copter::handle_battery_failsafe(const char *type_str, const int8_t action)
 {
     AP::logger().Write_Error(LogErrorSubsystem::FAILSAFE_BATT, LogErrorCode::FAILSAFE_OCCURRED);

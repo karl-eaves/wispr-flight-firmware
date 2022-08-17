@@ -95,6 +95,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
 #if OPTFLOW == ENABLED
     SCHED_TASK_CLASS(OpticalFlow,          &copter.optflow,             update,         200, 160),
 #endif
+    SCHED_TASK(check_esc_failsafe,    1,     120),
     SCHED_TASK(update_batt_compass,   10,    120),
     SCHED_TASK_CLASS(RC_Channels,          (RC_Channels*)&copter.g2.rc_channels,      read_aux_all,    10,     50),
     SCHED_TASK(arm_motors_check,      10,     50),
@@ -311,6 +312,11 @@ void Copter::throttle_loop()
     update_ground_effect_detector();
 
     update_dynamic_notch();
+}
+
+void Copter::check_esc_failsafe(void)
+{
+    esc.check_failsafe();
 }
 
 // update_batt_compass - read battery and compass

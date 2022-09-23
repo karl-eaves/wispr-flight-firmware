@@ -252,7 +252,7 @@ private:
     uint32_t last_telem_byte_read_us;
     int8_t last_control_port;
 
-    uint8_t const _ESC_TEMPERATURE_RTL_THRESHOLD = 100;
+    uint8_t const _ESC_TEMPERATURE_RTL_THRESHOLD = 101;
 
     bool msp_process_byte(uint8_t c);
     void blheli_crc_update(uint8_t c);

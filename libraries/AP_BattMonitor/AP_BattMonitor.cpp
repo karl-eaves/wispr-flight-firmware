@@ -545,6 +545,24 @@ bool AP_BattMonitor::reset_remaining(uint16_t battery_mask, float percentage)
     return ret;
 }
 
+/*
+  reset battery backend values related to Wispr custom failsafe
+*/
+void AP_BattMonitor::reset_battery_failsafe_values()
+{
+
+    for (uint8_t i = 0; i < _num_instances; i++) {
+        if (drivers[i] == nullptr) {
+            continue;
+        }
+        drivers[i]->reset_battery_failsafe_values();
+    }
+
+
+    _has_triggered_failsafe = false;
+    AP_Notify::flags.failsafe_battery = false;
+}
+
 namespace AP {
 
 AP_BattMonitor &battery()

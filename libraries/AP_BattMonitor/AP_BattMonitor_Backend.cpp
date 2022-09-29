@@ -266,9 +266,11 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
         return;
     }
 
+    // Get the flight time only for the current flight by subtracting the time that the drone landed from the flight time.
+    // This is to ensure we reset our flight time within the loop to 0 if the drone is landed and taken off without a power cycle.
     AP_Stats *stats = AP::stats();
-    uint32_t _flight_time = stats->get_flight_time_s();
-
+    uint32_t _flight_time = stats->get_flight_time_s() - _landed_flight_time;   
+    
     if (_flight_time < 8) return;
 
     const float _resting_voltage = voltage_resting_estimate();
@@ -397,4 +399,15 @@ bool AP_BattMonitor_Backend::reset_remaining(float percentage)
     _state.failsafe = update_failsafes();
 
     return true;
+}
+
+/*
+  reset battery backend values related to Wispr custom failsafe
+*/
+void AP_BattMonitor_Backend::reset_battery_failsafe_values()
+{
+    AP_Stats *stats = AP::stats();
+    _landed_flight_time = stats->get_flight_time_s();
+    _capacity_rate = 0;
+    _initial_percent_remaining = 0;
 }

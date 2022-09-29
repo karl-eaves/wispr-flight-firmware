@@ -171,6 +171,8 @@ public:
     // reset battery remaining percentage
     bool reset_remaining(uint16_t battery_mask, float percentage);
 
+    void reset_battery_failsafe_values();
+
     static const struct AP_Param::GroupInfo var_info[];
 
 protected:

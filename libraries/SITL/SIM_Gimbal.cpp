@@ -285,7 +285,7 @@ void Gimbal::send_report(void)
                 case MAVLINK_MSG_ID_HEARTBEAT: {
                     mavlink_heartbeat_t pkt;
                     mavlink_msg_heartbeat_decode(&msg, &pkt);
-                    printf("Gimbal: got HB type=%u autopilot=%u base_mode=0x%x\n", pkt.type, pkt.autopilot, pkt.base_mode);
+                    // printf("Gimbal: got HB type=%u autopilot=%u base_mode=0x%x\n", pkt.type, pkt.autopilot, pkt.base_mode);
                     if (!seen_heartbeat) {
                         seen_heartbeat = true;
                         vehicle_component_id = msg.compid;
@@ -334,7 +334,7 @@ void Gimbal::send_report(void)
                     break;
                 }
                 default:
-                    printf("Gimbal got unexpected msg %u\n", msg.msgid);
+                    // printf("Gimbal got unexpected msg %u\n", msg.msgid);
                     break;
                 }
             }

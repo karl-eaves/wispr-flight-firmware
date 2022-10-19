@@ -145,7 +145,7 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
     }
 
     if (custom_low_capacity){
-        return AP_BattMonitor::BatteryFailsafe_Critical;
+        return AP_BattMonitor::BatteryFailsafe_Low;
     }
 
     // if (low_capacity) {

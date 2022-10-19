@@ -23,6 +23,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <SRV_Channel/SRV_Channel.h>
 #include <GCS_MAVLink/GCS.h>
+#include <AP_BattMonitor/AP_BattMonitor.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -61,6 +62,7 @@ void AP_Motors::armed(bool arm)
         AP_Notify::flags.armed = arm;
         if (!arm) {
             save_params_on_disarm();
+            AP::battery().reset_battery_failsafe_values();
         }
     }
 };

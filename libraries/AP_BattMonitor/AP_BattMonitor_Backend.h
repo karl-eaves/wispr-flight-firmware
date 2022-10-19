@@ -65,6 +65,9 @@ public:
     // reset remaining percentage to given value
     virtual bool reset_remaining(float percentage);
 
+    void reset_battery_failsafe_values();
+
+
 protected:
     AP_BattMonitor                      &_mon;      // reference to front-end
     AP_BattMonitor::BattMonitor_State   &_state;    // reference to this instances state (held in the front-end)
@@ -73,6 +76,7 @@ protected:
     // checks what failsafes could be triggered
     void check_failsafe_types(bool &low_voltage, bool &low_capacity, bool &critical_voltage, bool &critical_capacity, bool &custom_low_capacity) const;
     double _get_distance_to_home(void) const;
+
 
 private:
     // resistance estimate
@@ -101,6 +105,8 @@ private:
     mutable uint32_t _time_of_capacity_rate_update;
 
     mutable float _initial_percent_remaining = 0;
+
+    mutable float _landed_flight_time = 0;  // Variable used to track the flight time if the drone is landed and taken off without a power cycle.
 
     const uint32_t _capacity_rate_time_period_ms = 15000;
 

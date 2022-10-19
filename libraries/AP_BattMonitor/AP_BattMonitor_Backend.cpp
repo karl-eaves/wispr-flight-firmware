@@ -272,7 +272,6 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
     uint32_t _flight_time = stats->get_flight_time_s() - _landed_flight_time;   
     
     if (_flight_time < 8) return;
-
     const float _resting_voltage = voltage_resting_estimate();
 
     float _adjusted_capacity_percent = -0.3568410913 * powf(_resting_voltage,4) + 35.0222463246 * powf(_resting_voltage,3) - 1290.1979687034 * powf(_resting_voltage,2) + 21157.7578769615 * _resting_voltage - 130310.4773939850;
@@ -410,4 +409,5 @@ void AP_BattMonitor_Backend::reset_battery_failsafe_values()
     _landed_flight_time = stats->get_flight_time_s();
     _capacity_rate = 0;
     _initial_percent_remaining = 0;
+    reset_remaining(100.0);
 }

@@ -561,6 +561,7 @@ void AP_BattMonitor::reset_battery_failsafe_values()
 
     _has_triggered_failsafe = false;
     AP_Notify::flags.failsafe_battery = false;
+    _highest_failsafe_priority = INT8_MAX;
 }
 
 namespace AP {

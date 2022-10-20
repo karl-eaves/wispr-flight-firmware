@@ -278,6 +278,7 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
 
     if ((int)_initial_percent_remaining == 0) _initial_percent_remaining = _adjusted_capacity_percent;
 
+    // The horizontal speed is pulled from RTL_SPEED if set, and WPNAV_SPEED if not set. 0.3 is subtracted from the value since the drone never truly reaches the speed set.
     float _horizontal_velocity = (((int)_rtl_speed != 0) ? _rtl_speed : _wpnav_speed) - 0.3;
     double _horizontal_distance = _get_distance_to_home();
 

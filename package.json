@@ -1,0 +1,17 @@
+{
+    "name": "wispr-flight-firmware",
+    "version": "0.3.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "build": "npm run clean && npm run configure && npm run build:copter",
+        "build:copter": "./waf copter",
+        "clean": "./waf clean",
+        "configure": "npm run configure:cube:orange",
+        "configure:cube:orange": "./waf configure --board CubeOrange"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+    }
+}

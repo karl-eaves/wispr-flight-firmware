@@ -93,6 +93,7 @@ private:
     mutable float _land_speed;
     mutable float _land_speed_high;
     mutable float _wpnav_speed_dn;
+    mutable float _batt_capacity;
 
     mutable bool _rtl_speed_set = false;
     mutable bool _wpnav_speed_set = false;
@@ -100,11 +101,15 @@ private:
     mutable bool _land_speed_set = false;
     mutable bool _land_speed_high_set = false;
     mutable bool _wpnav_speed_dn_set = false;
+    mutable bool _batt_capacity_set = false;
 
     mutable float _capacity_rate = 0;
     mutable uint32_t _time_of_capacity_rate_update;
 
-    mutable float _initial_percent_remaining = 0;
+    mutable float _initial_theoretical_capacity_percent = 0;
+    mutable float _capacity_percent_ten_seconds_ago = 0;
+
+    mutable uint8_t _capacity_percent; 
 
     mutable float _landed_flight_time = 0;  // Variable used to track the flight time if the drone is landed and taken off without a power cycle.
 

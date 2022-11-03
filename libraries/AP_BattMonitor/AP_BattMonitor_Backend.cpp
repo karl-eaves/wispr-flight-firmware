@@ -22,32 +22,35 @@
 
 #include <vector>
 
-struct String {
-  char a[AP_MAX_NAME_SIZE+1];
+struct String
+{
+    char a[AP_MAX_NAME_SIZE + 1];
 };
-
 
 /*
   base class constructor.
   This incorporates initialisation as well.
 */
 AP_BattMonitor_Backend::AP_BattMonitor_Backend(AP_BattMonitor &mon, AP_BattMonitor::BattMonitor_State &mon_state,
-                                               AP_BattMonitor_Params &params) :
-        _mon(mon),
-        _state(mon_state),
-        _params(params)
+                                               AP_BattMonitor_Params &params) : _mon(mon),
+                                                                                _state(mon_state),
+                                                                                _params(params)
 {
 }
 
 /// capacity_remaining_pct - returns the % battery capacity remaining (0 ~ 100)
 uint8_t AP_BattMonitor_Backend::capacity_remaining_pct() const
 {
-    float mah_remaining = _params._pack_capacity - _state.consumed_mah;
-    if ( _params._pack_capacity > 10 ) { // a very very small battery
-        return MIN(MAX((100 * (mah_remaining) / _params._pack_capacity), 0), UINT8_MAX);
-    } else {
-        return 0;
-    }
+    return _capacity_percent;
+    // float mah_remaining = _params._pack_capacity - _state.consumed_mah;
+    // if (_params._pack_capacity > 10)
+    // { // a very very small battery
+    //     return MIN(MAX((100 * (mah_remaining) / _params._pack_capacity), 0), UINT8_MAX);
+    // }
+    // else
+    // {
+    //     return 0;
+    // }
 }
 
 // update battery resistance estimate
@@ -57,19 +60,22 @@ uint8_t AP_BattMonitor_Backend::capacity_remaining_pct() const
 void AP_BattMonitor_Backend::update_resistance_estimate()
 {
     // return immediately if no current
-    if (!has_current() || !is_positive(_state.current_amps)) {
+    if (!has_current() || !is_positive(_state.current_amps))
+    {
         return;
     }
 
     // update maximum current seen since startup and protect against divide by zero
     _current_max_amps = MAX(_current_max_amps, _state.current_amps);
     float current_delta = _state.current_amps - _current_filt_amps;
-    if (is_zero(current_delta)) {
+    if (is_zero(current_delta))
+    {
         return;
     }
 
     // update reference voltage and current
-    if (_state.voltage > _resistance_voltage_ref) {
+    if (_state.voltage > _resistance_voltage_ref)
+    {
         _resistance_voltage_ref = _state.voltage;
         _resistance_current_ref = _state.current_amps;
     }
@@ -80,22 +86,24 @@ void AP_BattMonitor_Backend::update_resistance_estimate()
     _resistance_timer_ms = now;
 
     // estimate short-term resistance
-    float filt_alpha = constrain_float(loop_interval/(loop_interval + AP_BATT_MONITOR_RES_EST_TC_1), 0.0f, 0.5f);
-    float resistance_alpha = MIN(1, AP_BATT_MONITOR_RES_EST_TC_2*fabsf((_state.current_amps-_current_filt_amps)/_current_max_amps));
-    float resistance_estimate = -(_state.voltage-_voltage_filt)/current_delta;
-    if (is_positive(resistance_estimate)) {
-        _state.resistance = _state.resistance*(1-resistance_alpha) + resistance_estimate*resistance_alpha;
+    float filt_alpha = constrain_float(loop_interval / (loop_interval + AP_BATT_MONITOR_RES_EST_TC_1), 0.0f, 0.5f);
+    float resistance_alpha = MIN(1, AP_BATT_MONITOR_RES_EST_TC_2 * fabsf((_state.current_amps - _current_filt_amps) / _current_max_amps));
+    float resistance_estimate = -(_state.voltage - _voltage_filt) / current_delta;
+    if (is_positive(resistance_estimate))
+    {
+        _state.resistance = _state.resistance * (1 - resistance_alpha) + resistance_estimate * resistance_alpha;
     }
 
     // calculate maximum resistance
-    if ((_resistance_voltage_ref > _state.voltage) && (_state.current_amps > _resistance_current_ref)) {
+    if ((_resistance_voltage_ref > _state.voltage) && (_state.current_amps > _resistance_current_ref))
+    {
         float resistance_max = (_resistance_voltage_ref - _state.voltage) / (_state.current_amps - _resistance_current_ref);
         _state.resistance = MIN(_state.resistance, resistance_max);
     }
 
     // update the filtered voltage and currents
-    _voltage_filt = _voltage_filt*(1-filt_alpha) + _state.voltage*filt_alpha;
-    _current_filt_amps = _current_filt_amps*(1-filt_alpha) + _state.current_amps*filt_alpha;
+    _voltage_filt = _voltage_filt * (1 - filt_alpha) + _state.voltage * filt_alpha;
+    _current_filt_amps = _current_filt_amps * (1 - filt_alpha) + _state.current_amps * filt_alpha;
 
     // update estimated voltage without sag
     _state.voltage_resting_estimate = _state.voltage + _state.current_amps * _state.resistance;
@@ -114,15 +122,21 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
     bool low_voltage, low_capacity, critical_voltage, critical_capacity, custom_low_capacity;
     check_failsafe_types(low_voltage, low_capacity, critical_voltage, critical_capacity, custom_low_capacity);
 
-    if (critical_voltage) {
+    if (critical_voltage)
+    {
         // this is the first time our voltage has dropped below minimum so start timer
-        if (_state.critical_voltage_start_ms == 0) {
+        if (_state.critical_voltage_start_ms == 0)
+        {
             _state.critical_voltage_start_ms = now;
-        } else if (_params._low_voltage_timeout > 0 &&
-                   now - _state.critical_voltage_start_ms > uint32_t(_params._low_voltage_timeout)*1000U) {
+        }
+        else if (_params._low_voltage_timeout > 0 &&
+                 now - _state.critical_voltage_start_ms > uint32_t(_params._low_voltage_timeout) * 1000U)
+        {
             // return AP_BattMonitor::BatteryFailsafe_Critical;
         }
-    } else {
+    }
+    else
+    {
         // acceptable voltage so reset timer
         _state.critical_voltage_start_ms = 0;
     }
@@ -131,20 +145,27 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
     //     return AP_BattMonitor::BatteryFailsafe_Critical;
     // }
 
-    if (low_voltage) {
+    if (low_voltage)
+    {
         // this is the first time our voltage has dropped below minimum so start timer
-        if (_state.low_voltage_start_ms == 0) {
+        if (_state.low_voltage_start_ms == 0)
+        {
             _state.low_voltage_start_ms = now;
-        } else if (_params._low_voltage_timeout > 0 &&
-                   now - _state.low_voltage_start_ms > uint32_t(_params._low_voltage_timeout)*1000U) {
+        }
+        else if (_params._low_voltage_timeout > 0 &&
+                 now - _state.low_voltage_start_ms > uint32_t(_params._low_voltage_timeout) * 1000U)
+        {
             return AP_BattMonitor::BatteryFailsafe_Low;
         }
-    } else {
+    }
+    else
+    {
         // acceptable voltage so reset timer
         _state.low_voltage_start_ms = 0;
     }
 
-    if (custom_low_capacity){
+    if (custom_low_capacity)
+    {
         return AP_BattMonitor::BatteryFailsafe_Low;
     }
 
@@ -156,13 +177,12 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor_Backend::update_failsafes(void)
     return AP_BattMonitor::BatteryFailsafe_None;
 }
 
-
 double AP_BattMonitor_Backend::_get_distance_to_home(void) const
 {
 
     const AP_AHRS &ahrs = AP::ahrs();
 
-    Location home_loc =  ahrs.get_home();
+    Location home_loc = ahrs.get_home();
 
     Location current_loc;
     ahrs.get_position(current_loc);
@@ -173,14 +193,15 @@ double AP_BattMonitor_Backend::_get_distance_to_home(void) const
 
 static bool update_check(size_t buflen, char *buffer, bool failed, const char *message)
 {
-    if (failed) {
+    if (failed)
+    {
         strncpy(buffer, message, buflen);
         return false;
     }
     return true;
 }
 
-bool AP_BattMonitor_Backend::arming_checks(char * buffer, size_t buflen) const
+bool AP_BattMonitor_Backend::arming_checks(char *buffer, size_t buflen) const
 {
     bool low_voltage, low_capacity, critical_voltage, critical_capacity, custom_low_capacity;
     check_failsafe_types(low_voltage, low_capacity, critical_voltage, critical_capacity, custom_low_capacity);
@@ -196,7 +217,7 @@ bool AP_BattMonitor_Backend::arming_checks(char * buffer, size_t buflen) const
                                 is_positive(_params._low_voltage) &&
                                 (_params._low_voltage < _params._critical_voltage);
 
-    bool result = update_check(buflen, buffer, low_voltage,  "low voltage failsafe");
+    bool result = update_check(buflen, buffer, low_voltage, "low voltage failsafe");
     result = result && update_check(buflen, buffer, low_capacity, "low capacity failsafe");
     result = result && update_check(buflen, buffer, critical_voltage, "critical voltage failsafe");
     result = result && update_check(buflen, buffer, critical_capacity, "critical capacity failsafe");
@@ -213,70 +234,105 @@ void AP_BattMonitor_Backend::check_failsafe_types(bool &low_voltage, bool &low_c
 {
     // use voltage or sag compensated voltage
     float voltage_used;
-    switch (_params.failsafe_voltage_source()) {
-        case AP_BattMonitor_Params::BattMonitor_LowVoltageSource_Raw:
-        default:
-            voltage_used = _state.voltage;
-            break;
-        case AP_BattMonitor_Params::BattMonitor_LowVoltageSource_SagCompensated:
-            voltage_used = voltage_resting_estimate();
-            break;
+    switch (_params.failsafe_voltage_source())
+    {
+    case AP_BattMonitor_Params::BattMonitor_LowVoltageSource_Raw:
+    default:
+        voltage_used = _state.voltage;
+        break;
+    case AP_BattMonitor_Params::BattMonitor_LowVoltageSource_SagCompensated:
+        voltage_used = voltage_resting_estimate();
+        break;
     }
 
     // check critical battery levels
-    if ((voltage_used > 0) && (_params._critical_voltage > 0) && (voltage_used < _params._critical_voltage)) {
+    if ((voltage_used > 0) && (_params._critical_voltage > 0) && (voltage_used < _params._critical_voltage))
+    {
         critical_voltage = true;
-    } else {
+    }
+    else
+    {
         critical_voltage = false;
     }
 
     // check capacity failsafe if current monitoring is enabled
     if (has_current() && (_params._critical_capacity > 0) &&
-        ((_params._pack_capacity - _state.consumed_mah) < _params._critical_capacity)) {
+        ((_params._pack_capacity - _state.consumed_mah) < _params._critical_capacity))
+    {
         critical_capacity = true;
-    } else {
+    }
+    else
+    {
         critical_capacity = false;
     }
 
-    if ((voltage_used > 0) && (_params._low_voltage > 0) && (voltage_used < _params._low_voltage)) {
+    if ((voltage_used > 0) && (_params._low_voltage > 0) && (voltage_used < _params._low_voltage))
+    {
         low_voltage = true;
-    } else {
+    }
+    else
+    {
         low_voltage = false;
     }
 
     // check capacity if current monitoring is enabled
     if (has_current() && (_params._low_capacity > 0) &&
-        ((_params._pack_capacity - _state.consumed_mah) < _params._low_capacity)) {
+        ((_params._pack_capacity - _state.consumed_mah) < _params._low_capacity))
+    {
         low_capacity = true;
-    } else {
+    }
+    else
+    {
         low_capacity = false;
     }
 
     check_custom_failsafe(custom_low_capacity);
-
 }
 
 void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
 {
 
-    custom_failsafe = false;    // set failsafe to false so that it will be set if the function returns early
+    custom_failsafe = false; // set failsafe to false so that it will be set if the function returns early
 
-    if (!param_values_set()){
+    if (!param_values_set())
+    {
         set_param_values();
         return;
+    }
+
+    // Calculate theoretical capacity based on resting voltage. This curve is based on flight tests performed over a month long period.
+    const float _resting_voltage = voltage_resting_estimate();
+    float _theoretical_capacity_percent = -0.3568410913 * powf(_resting_voltage, 4) + 35.0222463246 * powf(_resting_voltage, 3) - 1290.1979687034 * powf(_resting_voltage, 2) + 21157.7578769615 * _resting_voltage - 130310.4773939850;
+
+    // Set the initial theoretical capacity percent. This is used to calculate the actual capacity percent.
+    if ((int)_initial_theoretical_capacity_percent == 0)
+    {
+        _initial_theoretical_capacity_percent = _theoretical_capacity_percent;
     }
 
     // Get the flight time only for the current flight by subtracting the time that the drone landed from the flight time.
     // This is to ensure we reset our flight time within the loop to 0 if the drone is landed and taken off without a power cycle.
     AP_Stats *stats = AP::stats();
-    uint32_t _flight_time = stats->get_flight_time_s() - _landed_flight_time;   
-    
-    if (_flight_time < 8) return;
-    const float _resting_voltage = voltage_resting_estimate();
+    uint32_t _flight_time = stats->get_flight_time_s() - _landed_flight_time;
 
-    float _adjusted_capacity_percent = -0.3568410913 * powf(_resting_voltage,4) + 35.0222463246 * powf(_resting_voltage,3) - 1290.1979687034 * powf(_resting_voltage,2) + 21157.7578769615 * _resting_voltage - 130310.4773939850;
+    if (_flight_time < 8){
+        _capacity_percent = _theoretical_capacity_percent;
+        return;
+    }
 
-    if ((int)_initial_percent_remaining == 0) _initial_percent_remaining = _adjusted_capacity_percent;
+    // Calculate the actual capacity percent using the initial theoretical percent and the current consumed.
+    // This was added to account for bad battery cells.
+    float _actual_capacity_percent = _theoretical_capacity_percent - (_state.consumed_mah / (_batt_capacity * _theoretical_capacity_percent));
+
+    // Use the lower of the two calculated percentages
+    float _adjusted_capacity_percent = (_theoretical_capacity_percent < _actual_capacity_percent) ? _theoretical_capacity_percent : _actual_capacity_percent;
+
+    // Set capacity percent that's sent in mavlink packets
+    _capacity_percent = _adjusted_capacity_percent;
+
+
+    if ((int)_capacity_percent_ten_seconds_ago == 0)
+        _capacity_percent_ten_seconds_ago = _adjusted_capacity_percent;
 
     // The horizontal speed is pulled from RTL_SPEED if set, and WPNAV_SPEED if not set. 0.3 is subtracted from the value since the drone never truly reaches the speed set.
     float _horizontal_velocity = (((int)_rtl_speed != 0) ? _rtl_speed : _wpnav_speed) - 0.3;
@@ -290,41 +346,48 @@ void AP_BattMonitor_Backend::check_custom_failsafe(bool &custom_failsafe) const
     float _vertical_distance2 = _land_alt_low / 100;
     float _vertical_velocity2 = _land_speed / 100;
 
-    if (_current_altitude < _vertical_distance2) _vertical_distance2 = _current_altitude;
+    if (_current_altitude < _vertical_distance2)
+        _vertical_distance2 = _current_altitude;
 
     float _vertical_distance1 = _current_altitude - _vertical_distance2;
 
-    if (_vertical_distance1 < 0) _vertical_distance1 = 0;
+    if (_vertical_distance1 < 0)
+        _vertical_distance1 = 0;
 
-    float _vertical_velocity1  = ((int)_land_speed_high != 0) ? _land_speed_high : _wpnav_speed_dn;
+    float _vertical_velocity1 = ((int)_land_speed_high != 0) ? _land_speed_high : _wpnav_speed_dn;
 
     float _time_to_rtl = ((_horizontal_distance / _horizontal_velocity) + (_vertical_distance1 / _vertical_velocity1) + (_vertical_distance2 / _vertical_velocity2));
 
     // Capacity rate has not been set yet or is set to a negative value due to battery reading incorrectly
-    if (_capacity_rate <= 0){
+    if (_capacity_rate <= 0)
+    {
         set_capacity_rate(_adjusted_capacity_percent);
     }
 
     // Capacity rate needs to be updated
-    if (AP_HAL::millis() - _time_of_capacity_rate_update > _capacity_rate_time_period_ms){
+    if (AP_HAL::millis() - _time_of_capacity_rate_update > _capacity_rate_time_period_ms)
+    {
         set_capacity_rate(_adjusted_capacity_percent);
     }
 
-    if (_capacity_rate <=0) return;
+    if (_capacity_rate <= 0)
+        return;
 
     float _time_until_twenty_percent_capacity = (_adjusted_capacity_percent - _CAPACITY_TO_LAND) / _capacity_rate;
 
-    if (_time_to_rtl >= _time_until_twenty_percent_capacity){
+    if (_time_to_rtl >= _time_until_twenty_percent_capacity)
+    {
         custom_failsafe = true;
     }
 
     return;
 }
 
-void AP_BattMonitor_Backend::set_capacity_rate(float adjusted_capacity_percent) const {
-    
-    _capacity_rate = (_initial_percent_remaining - adjusted_capacity_percent) / (_capacity_rate_time_period_ms / 1000);
-    _initial_percent_remaining = adjusted_capacity_percent;
+void AP_BattMonitor_Backend::set_capacity_rate(float adjusted_capacity_percent) const
+{
+
+    _capacity_rate = (_capacity_percent_ten_seconds_ago - adjusted_capacity_percent) / (_capacity_rate_time_period_ms / 1000);
+    _capacity_percent_ten_seconds_ago = adjusted_capacity_percent;
     _time_of_capacity_rate_update = AP_HAL::millis();
 }
 
@@ -344,29 +407,32 @@ void AP_BattMonitor_Backend::set_param_values() const
     String LAND_SPEED_HIGH;
     String WPNAV_SPEED_DN;
     String LAND_SPEED;
+    String BATT_CAPACITY;
 
-    strncpy(WPNAV_SPEED.a,      "WPNAV_SPEED",      sizeof "WPNAV_SPEED");
-    strncpy(RTL_SPEED.a,        "RTL_SPEED",        sizeof "RTL_SPEED");
-    strncpy(LAND_ALT_LOW.a,     "LAND_ALT_LOW",     sizeof "LAND_ALT_LOW");
-    strncpy(LAND_SPEED_HIGH.a,  "LAND_SPEED_HIGH",  sizeof "LAND_SPEED_HIGH");
-    strncpy(WPNAV_SPEED_DN.a,   "WPNAV_SPEED_DN",   sizeof "WPNAV_SPEED_DN");
-    strncpy(LAND_SPEED.a,       "LAND_SPEED",       sizeof "LAND_SPEED");
+    strncpy(WPNAV_SPEED.a, "WPNAV_SPEED", sizeof "WPNAV_SPEED");
+    strncpy(RTL_SPEED.a, "RTL_SPEED", sizeof "RTL_SPEED");
+    strncpy(LAND_ALT_LOW.a, "LAND_ALT_LOW", sizeof "LAND_ALT_LOW");
+    strncpy(LAND_SPEED_HIGH.a, "LAND_SPEED_HIGH", sizeof "LAND_SPEED_HIGH");
+    strncpy(WPNAV_SPEED_DN.a, "WPNAV_SPEED_DN", sizeof "WPNAV_SPEED_DN");
+    strncpy(LAND_SPEED.a, "LAND_SPEED", sizeof "LAND_SPEED");
+    strncpy(BATT_CAPACITY.a, "BATT_CAPACITY", sizeof "BATT_CAPACITY");
 
-    std::vector<String> parameter_names = {WPNAV_SPEED, RTL_SPEED, LAND_ALT_LOW, LAND_SPEED_HIGH, WPNAV_SPEED_DN, LAND_SPEED};
-    std::vector<float*> parameter_values = {&_wpnav_speed, &_rtl_speed, &_land_alt_low, &_land_speed_high, &_wpnav_speed_dn, &_land_speed};
-    std::vector<bool*> parameter_values_set = {&_wpnav_speed_set, &_rtl_speed_set, &_land_alt_low_set, &_land_speed_high_set, &_wpnav_speed_dn_set, &_land_speed_set};
+    std::vector<String> parameter_names = {WPNAV_SPEED, RTL_SPEED, LAND_ALT_LOW, LAND_SPEED_HIGH, WPNAV_SPEED_DN, LAND_SPEED, BATT_CAPACITY};
+    std::vector<float *> parameter_values = {&_wpnav_speed, &_rtl_speed, &_land_alt_low, &_land_speed_high, &_wpnav_speed_dn, &_land_speed, &_batt_capacity};
+    std::vector<bool *> parameter_values_set = {&_wpnav_speed_set, &_rtl_speed_set, &_land_alt_low_set, &_land_speed_high_set, &_wpnav_speed_dn_set, &_land_speed_set, &_batt_capacity_set};
 
     for (uint32_t i = 0; i < parameter_names.size(); i++)
     {
         // WPNAV_SPEED
-        char param_name[AP_MAX_NAME_SIZE+1];
+        char param_name[AP_MAX_NAME_SIZE + 1];
         memset(param_name, 0, sizeof param_name);
 
         strncpy(param_name, parameter_names[i].a, sizeof parameter_names[i]);
         // param_name = "WPNAV_SPEED";
         // param_name[AP_MAX_NAME_SIZE] = 0;
         vp = AP_Param::find(param_name, &p_type);
-        if (vp != NULL) {
+        if (vp != NULL)
+        {
             *parameter_values[i] = vp->cast_to_float(p_type);
             *parameter_values_set[i] = true;
         }
@@ -409,6 +475,6 @@ void AP_BattMonitor_Backend::reset_battery_failsafe_values()
     AP_Stats *stats = AP::stats();
     _landed_flight_time = stats->get_flight_time_s();
     _capacity_rate = 0;
-    _initial_percent_remaining = 0;
+    _capacity_percent_ten_seconds_ago = 0;
     reset_remaining(100.0);
 }
